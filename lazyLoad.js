@@ -142,39 +142,49 @@ var lazyLoad = (function(){
                 top += ele.offsetTop;
             }
             return top;
+        },
+        //代理
+        proxy:function(context,cb){
+            if(typeof cb !== 'function'){
+                throw('cb should be a function');
+            }
+            return function(){
+                var arg = Array.prototype.slice.call(arguments);
+                return cb.apply(context,arg);
+            }
         }
     };
 
     LazyLoad.prototype.init = function(){
         var that = this;
-        function active(){
-            activeLazy(that);
-        }
+        // function active(){
+        //     activeLazy(that);
+        // }
         if(this.autoLoad){
-            var auto = function(){
-                interLazy(that);
-            };
-            this.loadTime = setInterval(auto,1000);
+            // var auto = function(){
+            //     interLazy(that);
+            // };
+            this.loadTime = setInterval(LazyLoad.Tools.proxy(this,interLazy),500);
 
         }
-        LazyLoad.Tools.on(window,'load',active);
-        LazyLoad.Tools.on(window,'resize',active);
+        LazyLoad.Tools.on(window,'load',LazyLoad.Tools.proxy(this,activeLazy));
+        LazyLoad.Tools.on(window,'resize',LazyLoad.Tools.proxy(this,activeLazy));
 //        目前的demo因为img元素大小会改变，img位置会随时变化，所以不能一次获取完之后直接使用
 //        项目中建议img定好长宽，使用loadLazy
         if(this.active){
-            LazyLoad.Tools.on(window,'scroll',active);
+            LazyLoad.Tools.on(window,'scroll',LazyLoad.Tools.proxy(this,activeLazy));
         }
         else{
-            var lazy = function(){
-                loadLazy(that);
-            };
-            LazyLoad.Tools.on(window,'scroll',lazy);
+            // var lazy = function(){
+            //     loadLazy(that);
+            // };
+            LazyLoad.Tools.on(window,'scroll',LazyLoad.Tools.proxy(this,loadLazy));
         }
     };
-    function activeLazy(that){
-        that.unload = that.ele.querySelectorAll('img[data-img]');
-        that.unload = Array.prototype.slice.call(that.unload,0,that.unload.length);
-        var unloadLen = that.unload.length;
+    function activeLazy(){
+        this.unload = this.ele.querySelectorAll('img[data-img]');
+        this.unload = Array.prototype.slice.call(this.unload,0,this.unload.length);
+        var unloadLen = this.unload.length;
         if(unloadLen === 0){
             return false;
         }
@@ -184,23 +194,23 @@ var lazyLoad = (function(){
         var scBottom = document.documentElement.clientHeight + scTop + 100;
         for(var i = 0;i < unloadLen;i++){
             //去掉已加载的图片
-            if(that.unload[i].getAttribute('src') !== null){
-                that.unload.splice(i,1);
-                unloadLen = that.unload.length;
+            if(this.unload[i].getAttribute('src') !== null){
+                this.unload.splice(i,1);
+                unloadLen = this.unload.length;
                 i--;
                 continue;
             }
-            var y = LazyLoad.Tools.pageY(that.unload[i]);
-            if(that.loadImg(i,scTop,scBottom)){
-                unloadLen = that.unload.length;
+            var y = LazyLoad.Tools.pageY(this.unload[i]);
+            if(this.loadImg(i,scTop,scBottom)){
+                unloadLen = this.unload.length;
                 i--;
                 continue;
             }
             //保存图片在页面的位置
-            LazyLoad.Tools.dataSet(that.unload[i],'pageY',y);
+            LazyLoad.Tools.dataSet(this.unload[i],'pageY',y);
         }
         //将图片按位置先后排序
-        that.unload.sort(function(a,b){
+        this.unload.sort(function(a,b){
             return LazyLoad.Tools.dataSet(a,'pageY') - LazyLoad.Tools.dataSet(b,'pageY');
         });
     }
@@ -239,8 +249,8 @@ var lazyLoad = (function(){
     };
 
     //静态加载图片
-    function loadLazy(that){
-        var unloadLen = that.unload.length;
+    function loadLazy(){
+        var unloadLen = this.unload.length;
         if(unloadLen === 0){
             return false;
         }
@@ -250,8 +260,8 @@ var lazyLoad = (function(){
         var scBottom = document.documentElement.clientHeight + scTop;
 
         for(var i = 0;i < unloadLen;i++){
-            if(that.loadImg(i,scTop,scBottom)){
-                unloadLen = that.unload.length;
+            if(this.loadImg(i,scTop,scBottom)){
+                unloadLen = this.unload.length;
                 i--;
             }
             else{
@@ -261,20 +271,20 @@ var lazyLoad = (function(){
     }
 
     //后续自动加载
-    function interLazy(that){
-        if(that.unload.length === 0){
-            clearInterval(that.loadTime);
+    function interLazy(){
+        if(this.unload.length === 0){
+            clearInterval(this.loadTime);
         }
-        else if(that.loading.length === 0){
-            that.loading = that.unload.slice(0,10);
-            var len = that.loading.length;
+        else if(this.loading.length === 0){
+            this.loading = this.unload.slice(0,10);
+            var len = this.loading.length;
             for(var i = 0;i < len;i++){
-                that.loadedImg(i);
-                that.loading[i].src = LazyLoad.Tools.dataSet(that.loading[i],'img');
+                this.loadedImg(i);
+                this.loading[i].src = LazyLoad.Tools.dataSet(this.loading[i],'img');
             }
-            that.unload.splice(0,10);
+            this.unload.splice(0,10);
         }
     }
     return LazyLoad;
 }());
-var a = new lazyLoad({active:true,autoLoad:false});
+var a = new lazyLoad({active:true,autoLoad:true});
